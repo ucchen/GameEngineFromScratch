@@ -3,6 +3,15 @@
 #include "SceneObjectTypeDef.hpp"
 
 namespace My {
+    enum VertexAttribute : unsigned long
+    {
+        VertexAttributePosition,
+        VertexAttributeNormal,
+        VertexAttributeTexcoord,
+        VertexAttributeTangent,
+        VertexAttributeBitangent
+    };
+
     class SceneObjectVertexArray 
     {
         protected:

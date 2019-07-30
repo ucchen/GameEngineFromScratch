@@ -4,42 +4,42 @@
     // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
         {
-            "name": "(Mac OS)(OpenGL) Launch Editor",
+            "name": "(Mac OS) Launch Editor",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/Editor/Editor.app/Contents/MacOS/Editor",
             "args": [
-                "Scene/ground.ogex"
             ],
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}",
+            "cwd": "${workspaceFolder}/build",
             "environment": [],
             "externalConsole": false,
             "MIMode": "lldb"
         },
         {
-            "name": "(Mac OS)(OpenGL) Launch Game",
+            "name": "(Mac OS) Launch Viewer",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/Viewer/Viewer.app/Contents/MacOS/Viewer",
+            "args": [
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/build",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "lldb"
+        },
+        {
+            "name": "(Mac OS) Launch Game",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/Game/Billiard/BilliardGame.app/Contents/MacOS/BilliardGame",
             "args": [
             ],
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}/Game/Billiard",
-            "environment": [],
-            "externalConsole": false,
-            "MIMode": "lldb"
-        },
-        {
-            "name": "(Mac OS) Launch Test",
-            "type": "cppdbg",
-            "request": "launch",
-            "program": "${workspaceFolder}/build/Test/HdrParserTest",
-            "args": [
-            ],
-            "stopAtEntry": false,
-            "cwd": "${workspaceFolder}",
+            "cwd": "${workspaceFolder}/build",
             "environment": [],
             "externalConsole": false,
             "MIMode": "lldb"
@@ -50,22 +50,21 @@
             "request": "launch",
             "program": "${workspaceFolder}/build/Editor/Debug/Editor.exe",
             "args": [
-                "Scene/ground.ogex"
             ],
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}",
+            "cwd": "${workspaceFolder}/build",
             "environment": [],
             "externalConsole": false
         },
         {
-            "name": "(Windows) Launch Test",
+            "name": "(Windows) Launch Viewer",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/Test/Debug/DdsParserTest.exe",
+            "program": "${workspaceFolder}/build/Viewer/Debug/Viewer.exe",
             "args": [
             ],
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}",
+            "cwd": "${workspaceFolder}/build",
             "environment": [],
             "externalConsole": false
         },
@@ -73,10 +72,10 @@
             "name": "(Windows) Launch Game",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/Game/Billiard/Debug/BilliardGame.exe",
+            "program": "${workspaceFolder}/Game/Billiard/Debug/BilliardGame.exe",
             "args": [],
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}/Game/Billiard",
+            "cwd": "${workspaceFolder}/build",
             "environment": [],
             "externalConsole": false
         }

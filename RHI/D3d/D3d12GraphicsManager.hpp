@@ -13,54 +13,50 @@ namespace My {
     class D3d12GraphicsManager : public GraphicsManager
     {
     public:
-       	virtual int Initialize();
-	    virtual void Finalize();
+       	int Initialize() final;
+	    void Finalize() final;
 
-        virtual void Clear();
+        void Draw() final;
+        void Present() final;
 
-        virtual void Draw();
+        void UseShaderProgram(const IShaderManager::ShaderHandler shaderProgram) final;
 
-    protected:
-        bool SetPerFrameShaderParameters();
-        bool SetPerBatchShaderParameters(int32_t index);
-
-        void UpdateConstants();
-        void InitializeBuffers(const Scene& scene);
-        void ClearBuffers();
-        void RenderBuffers();
+        void DrawBatch(const std::vector<std::shared_ptr<DrawBatchContext>>& batches) final;
 
     private:
+        void BeginScene(const Scene& scene) final;
+        void EndScene() final;
+
+        void BeginFrame() final;
+        void EndFrame() final;
+
+        void SetPerFrameConstants(const DrawFrameContext& context) final;
+        void SetPerBatchConstants(const std::vector<std::shared_ptr<DrawBatchContext>>& batches) final;
+
         HRESULT CreateDescriptorHeaps();
         HRESULT CreateRenderTarget();
         HRESULT CreateDepthStencil();
         HRESULT CreateGraphicsResources();
-        HRESULT CreateSamplerBuffer();
-        HRESULT CreateTextureBuffer();
-        HRESULT CreateTextureBuffer(SceneObjectTexture& texture);
-        HRESULT CreateConstantBuffer();
-        HRESULT CreateIndexBuffer(const SceneObjectIndexArray& index_array);
-        HRESULT CreateVertexBuffer(const SceneObjectVertexArray& v_property_array);
+
+        uint32_t CreateSamplerBuffer();
+        int32_t CreateTextureBuffer(SceneObjectTexture& texture);
+        uint32_t CreateConstantBuffer();
+        size_t CreateIndexBuffer(const SceneObjectIndexArray& index_array);
+        size_t CreateVertexBuffer(const SceneObjectVertexArray& v_property_array);
+
         HRESULT CreateRootSignature();
         HRESULT WaitForPreviousFrame();
-        HRESULT PopulateCommandList();
+        HRESULT ResetCommandList();
         HRESULT InitializePSO();
         HRESULT CreateCommandList();
-
-
-        HRESULT CreateInternalVertexBuffer();
+        HRESULT MsaaResolve();
 
     private:
-        static const uint32_t           m_kFrameCount  = 2;
-        static const uint32_t           m_kMaxTextureCount  = 2048;
-        static const uint32_t           m_kMaxObjectCount = 2048;
-        static const uint32_t           m_kMaxLightCount = 100;
-		static const uint32_t		    m_kTextureDescStartIndex = m_kFrameCount * m_kMaxObjectCount * 2;
-
         ID3D12Device*                   m_pDev       = nullptr;             // the pointer to our Direct3D device interface
         D3D12_VIEWPORT                  m_ViewPort;                         // viewport structure
         D3D12_RECT                      m_ScissorRect;                      // scissor rect structure
         IDXGISwapChain3*                m_pSwapChain = nullptr;             // the pointer to the swap chain interface
-        ID3D12Resource*                 m_pRenderTargets[m_kFrameCount];      // the pointer to rendering buffer. [descriptor]
+        ID3D12Resource*                 m_pRenderTargets[GfxConfiguration::kMaxInFlightFrameCount];    // the pointer to rendering buffer. [descriptor]
         ID3D12Resource*                 m_pDepthStencilBuffer;              // the pointer to the depth stencil buffer
         ID3D12Resource*                 m_pMsaaRenderTarget;                // the pointer to the MSAA rendering target
         ID3D12CommandAllocator*         m_pCommandAllocator = nullptr;      // the pointer to command buffer allocator
@@ -69,7 +65,7 @@ namespace My {
         ID3D12RootSignature*            m_pRootSignatureResolve = nullptr;  // a graphics root signature defines what resources are bound to the pipeline
         ID3D12DescriptorHeap*           m_pRtvHeap = nullptr;               // an array of descriptors of GPU objects
         ID3D12DescriptorHeap*           m_pDsvHeap = nullptr;               // an array of descriptors of GPU objects
-		ID3D12DescriptorHeap*           m_pCbvHeap = nullptr;               // an array of descriptors of GPU objects
+		ID3D12DescriptorHeap*           m_pCbvSrvHeap = nullptr;            // an array of descriptors of GPU objects
         ID3D12DescriptorHeap*           m_pSamplerHeap = nullptr;           // an array of descriptors of GPU objects
         ID3D12PipelineState*            m_pPipelineState = nullptr;         // an object maintains the state of all currently set shaders
                                                                             // and certain fixed function state objects
@@ -79,37 +75,22 @@ namespace My {
 
         uint32_t                        m_nRtvDescriptorSize;
         uint32_t                        m_nCbvSrvDescriptorSize;
+        uint32_t                        m_nSamplerDescriptorSize;
 
-        std::vector<ID3D12Resource*>    m_Buffers;                          // the pointer to the vertex buffer
-        std::vector<ID3D12Resource*>    m_Textures;                          // the pointer to the vertex buffer
-        std::map<std::string, size_t>  m_TextureIndex;
-        std::vector<D3D12_VERTEX_BUFFER_VIEW>       m_VertexBufferView;                 // a view of the vertex buffer
-        std::vector<D3D12_INDEX_BUFFER_VIEW>        m_IndexBufferView;                  // a view of the vertex buffer
-        D3D12_VERTEX_BUFFER_VIEW                    m_VertexBufferViewResolve;
+        std::vector<ID3D12Resource*>    m_Buffers;                          // the pointer to the GPU buffer other than texture
+        std::vector<ID3D12Resource*>    m_Textures;                         // the pointer to the Texture buffer
+        std::vector<D3D12_VERTEX_BUFFER_VIEW>       m_VertexBufferView;     // vertex buffer descriptors
+        std::vector<D3D12_INDEX_BUFFER_VIEW>        m_IndexBufferView;      // index buffer descriptors
+        std::vector<D3D12_CONSTANT_BUFFER_VIEW_DESC> m_ConstantBufferView;  // constant buffer descriptors
 
-        struct PerBatchConstants
-        {
-            Matrix4X4f objectMatrix;
-            Vector4f   diffuseColor;
-            Vector4f   specularColor;
-            float specularPower;
-	        bool usingDiffuseMap;
-	        bool usingNormalMap;
-        };
-
-        struct DrawBatchContext {
+        struct D3dDrawBatchContext : public DrawBatchContext {
             uint32_t index_count;
+            size_t   index_offset;
             uint32_t property_count;
-            std::shared_ptr<SceneGeometryNode> node;
-            std::shared_ptr<SceneObjectMaterial> material;
+            size_t   property_offset;
         };
 
-        std::vector<DrawBatchContext> m_DrawBatchContext;
-
-        uint8_t*                        m_pCbvDataBegin = nullptr;
-		size_t				            m_kSizePerFrameConstantBuffer;
-		size_t				            m_kSizePerBatchConstantBuffer;
-		size_t				            m_kSizeConstantBufferPerFrame;
+        uint8_t*                        m_pCbvDataBegin[GfxConfiguration::kMaxInFlightFrameCount] = {nullptr};
 
         // Synchronization objects
         HANDLE                          m_hFenceEvent;

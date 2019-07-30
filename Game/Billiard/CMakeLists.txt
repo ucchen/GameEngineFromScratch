@@ -8,35 +8,93 @@ IF(ANDROID)
         BilliardGameLogic.cpp BilliardGameConfig.cpp)
 ELSEIF(APPLE)
     add_executable(BilliardGame MACOSX_BUNDLE
-        BilliardGameLogic.cpp BilliardGameConfig.cpp)
+        BilliardGameLogic.cpp BilliardGameConfig.cpp
+        Main.metallib
+        )
 ELSE(ANDROID)
-    add_executable(BilliardGame 
+    add_executable(BilliardGame
         BilliardGameLogic.cpp BilliardGameConfig.cpp)
 ENDIF(ANDROID)
 
-IF(WIN32)
+IF(APPLE)
+    set(SHADER_SOURCES basic.vert basic.frag
+    debug.vert debug.frag
+    pbr.vert pbr.frag
+    skybox.vert skybox.frag
+    shadowmap.vert shadowmap.frag
+    shadowmap_omni.vert shadowmap_omni.frag
+    terrain.vert terrain.frag
+    texture.frag texturearray.frag
+    passthrough.vert passthrough_cube.vert
+    integrateBRDF.comp
+    )
+
+    foreach(SHADER IN LISTS SHADER_SOURCES)
+        add_custom_command(OUTPUT ${SHADER}.air
+        COMMAND xcrun -sdk macosx metal -g -MO -c ${PROJECT_SOURCE_DIR}/Asset/Shaders/Metal/${SHADER}.metal -o ${SHADER}.air
+        COMMENT "Compile ${SHADER}.metal --> ${SHADER}.air"
+        DEPENDS ${PROJECT_SOURCE_DIR}/Asset/Shaders/Metal/${SHADER}.metal
+    )
+
+    list(APPEND AIRS ${SHADER}.air)
+    endforeach(SHADER)
+
+    add_custom_command(OUTPUT Main.metalar
+        COMMAND xcrun -sdk macosx metal-ar rcv Main.metalar ${AIRS}
+        COMMENT "Archive ${AIRS} --> Main.metalar"
+        DEPENDS ${AIRS}
+    )
+
+    add_custom_command(OUTPUT Main.metallib
+        COMMAND xcrun -sdk macosx metallib Main.metalar -split-module-without-linking -o Main.metallib
+        COMMENT "Compile Editor.metalar --> Main.metallib"
+        DEPENDS Main.metalar
+    )
+
+    add_custom_target(BilliardGameShaderLibrary
+        DEPENDS Main.metallib
+    )
+
+    add_dependencies(BilliardGame BilliardGameShaderLibrary)
+
+    set(RESOURCE_FILES
+        Main.metallib
+    )
+
+    set_target_properties(BilliardGame PROPERTIES
+        RESOURCE "${RESOURCE_FILES}"
+    )
+
     target_link_libraries(BilliardGame 
                             BulletPhysics
-                            MyGameEngineOpenGL
+                            Common
+                            MetalRHI
+                            PlatformInterface
                         )
+ELSEIF(WA)
+    target_link_libraries(BilliardGame 
+                            BulletPhysics
+                            OpenGLRHI
+                            Common
+                            Sdl
+                        )
+    set_target_properties(BilliardGame
+            PROPERTIES LINK_FLAGS "-s FULL_ES2=1 -s FULL_ES3=1 -s USE_SDL=2 -s USE_WEBGL2=1"
+            )
+ELSE(APPLE)
+    target_link_libraries(BilliardGame 
+                            BulletPhysics
+                            OpenGLRHI
+                            Common
+                            PlatformInterface
+                        )
+ENDIF(APPLE)
+
+IF(WIN32)
     add_custom_command(TARGET BilliardGame POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${PROJECT_SOURCE_DIR}/External/Windows/bin/zlib.dll"
             $<TARGET_FILE_DIR:BilliardGame>)
-ELSE(WIN32)
-    target_link_libraries(BilliardGame 
-                            BulletPhysics
-                            MyGameEngine
-                        )
 ENDIF(WIN32)
 
-IF(NOT ANDROID)
-    add_custom_command(TARGET BilliardGame POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory 
-            $<TARGET_FILE_DIR:BilliardGame>/Asset
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-            "${CMAKE_CURRENT_SOURCE_DIR}/Asset"
-            $<TARGET_FILE_DIR:BilliardGame>/Asset)
-ENDIF(NOT ANDROID)
-
-
+target_include_directories(BilliardGame PRIVATE "${PROJECT_SOURCE_DIR}/External/src/glad/include")

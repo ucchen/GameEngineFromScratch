@@ -26,13 +26,15 @@ void ShadowMapPass::Draw(Frame& frame)
     }
 
     // count shadow map
-    vector<decltype(frame.frameContext.m_lights)::iterator> lights_cast_shadow;
+    vector<Light*> lights_cast_shadow;
 
-    for (auto it = frame.frameContext.m_lights.begin(); it != frame.frameContext.m_lights.end(); it++)
+    for (int32_t i = 0; i < frame.frameContext.numLights; i++)
     {
-        if (it->lightCastShadow)
+        auto& light = frame.lightInfo.lights[i];
+        
+        if (light.lightCastShadow)
         {
-            switch (it->lightType)
+            switch (light.lightType)
             {
                 case LightType::Omni:
                     frame.frameContext.cubeShadowMapCount++;
@@ -50,7 +52,7 @@ void ShadowMapPass::Draw(Frame& frame)
                     assert(0);
             }
 
-            lights_cast_shadow.push_back(it);
+            lights_cast_shadow.push_back(&light);
         }
     }
 
@@ -62,13 +64,22 @@ void ShadowMapPass::Draw(Frame& frame)
     const uint32_t kGlobalShadowMapHeight = 2048; // shadow map for sun light
 
     // generate shadow map array
-    frame.frameContext.shadowMap = g_pGraphicsManager->GenerateShadowMapArray(kShadowMapWidth, kShadowMapHeight, frame.frameContext.shadowMapCount);
+    if (frame.frameContext.shadowMapCount)
+    {
+        frame.frameContext.shadowMap = g_pGraphicsManager->GenerateShadowMapArray(kShadowMapWidth, kShadowMapHeight, frame.frameContext.shadowMapCount);
+    }
 
     // generate global shadow map array
-    frame.frameContext.globalShadowMap = g_pGraphicsManager->GenerateShadowMapArray(kGlobalShadowMapWidth, kGlobalShadowMapHeight, frame.frameContext.globalShadowMapCount);
+    if (frame.frameContext.globalShadowMapCount)
+    {
+        frame.frameContext.globalShadowMap = g_pGraphicsManager->GenerateShadowMapArray(kGlobalShadowMapWidth, kGlobalShadowMapHeight, frame.frameContext.globalShadowMapCount);
+    }
 
     // generate cube shadow map array
-    frame.frameContext.cubeShadowMap = g_pGraphicsManager->GenerateCubeShadowMapArray(kCubeShadowMapWidth, kCubeShadowMapHeight, frame.frameContext.cubeShadowMapCount);
+    if (frame.frameContext.cubeShadowMapCount)
+    {
+        frame.frameContext.cubeShadowMap = g_pGraphicsManager->GenerateCubeShadowMapArray(kCubeShadowMapWidth, kCubeShadowMapHeight, frame.frameContext.cubeShadowMapCount);
+    }
 
     uint32_t shadowmap_index = 0;
     uint32_t global_shadowmap_index = 0;
@@ -76,7 +87,7 @@ void ShadowMapPass::Draw(Frame& frame)
 
     for (auto it : lights_cast_shadow)
     {
-        intptr_t shadowmap;
+        int32_t shadowmap;
         DefaultShaderIndex shader_index = DefaultShaderIndex::ShadowMap;
         int32_t width, height;
 
@@ -116,16 +127,10 @@ void ShadowMapPass::Draw(Frame& frame)
         // Set the color shader as the current shader program and set the matrices that it will use for rendering.
         g_pGraphicsManager->UseShaderProgram(shaderProgram);
 
-        g_pGraphicsManager->SetPerFrameConstants(frame.frameContext);
-
         g_pGraphicsManager->BeginShadowMap(*it, shadowmap, 
             width, height, it->lightShadowMapIndex);
 
-        for (auto iter = frame.batchContexts.cbegin(); iter != frame.batchContexts.cend(); iter++)
-        {
-            g_pGraphicsManager->SetPerBatchConstants(**iter);
-            g_pGraphicsManager->DrawBatchDepthOnly(**iter);
-        }
+        g_pGraphicsManager->DrawBatch(frame.batchContexts);
 
         g_pGraphicsManager->EndShadowMap(shadowmap, it->lightShadowMapIndex);
     }

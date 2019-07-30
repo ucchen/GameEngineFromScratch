@@ -1,4 +1,5 @@
 #include "WindowsApplication.hpp"
+#include "InputManager.hpp"
 #include <tchar.h>
 
 using namespace My;
@@ -43,26 +44,10 @@ void WindowsApplication::CreateMainWindow()
                           hInstance,                        // application handle
                           this);                            // pass pointer to current object
 
-    // display the window on the screen
-    ShowWindow(m_hWnd, SW_SHOW);
-
-}
-
-int WindowsApplication::Initialize()
-{
-    int result;
-
-    CreateMainWindow();
-
     m_hDc = GetDC(m_hWnd);
 
-	// call base class initialization
-    result = BaseApplication::Initialize();
-
-    if (result != 0)
-        exit(result);
-
-    return result;
+    // display the window on the screen
+    ShowWindow(m_hWnd, SW_SHOW);
 }
 
 void WindowsApplication::Finalize()
@@ -94,6 +79,8 @@ void WindowsApplication::Tick()
 // this is the main message handler for the program
 LRESULT CALLBACK WindowsApplication::WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+    LRESULT result = 0;
+
     WindowsApplication* pThis;
     if (message == WM_NCCREATE)
     {
@@ -191,10 +178,13 @@ LRESULT CALLBACK WindowsApplication::WindowProc(HWND hWnd, UINT message, WPARAM 
                 PostQuitMessage(0);
                 m_bQuit = true;
             }
+            break;
+        default:
+            // Handle any messages the switch statement didn't
+            result = DefWindowProc (hWnd, message, wParam, lParam);
     }
 
-    // Handle any messages the switch statement didn't
-    return DefWindowProc (hWnd, message, wParam, lParam);
+    return result;
 }
 
 
